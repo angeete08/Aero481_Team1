@@ -6,19 +6,19 @@ cruise_alt   = 25000.0;   % ft
 res_alt      = 10000.0;   % ft (for go around)
 total_range_ft = 400.0 * 6076.12; % ft
 
-% Airspeed
-v_climb_kts  = 155.0; %knots
-v_cruise_kts = 250.0; %knots
-v_desc_kts   = 200.0; %knots
-v_loiter_kts = 135.0; %knots
+% Airspeeds
+v_climb_kts  = 155.0;
+v_cruise_kts = 250.0;
+v_desc_kts   = 200.0;
+v_loiter_kts = 135.0; 
 
-v_climb_ftmin  = v_climb_kts * 101.269; % ft/min
-v_cruise_ftmin = v_cruise_kts * 101.269; % ft/min
-v_desc_ftmin   = v_desc_kts * 101.269; % ft/min
+v_climb_ftmin  = v_climb_kts * 101.269;
+v_cruise_ftmin = v_cruise_kts * 101.269;
+v_desc_ftmin   = v_desc_kts * 101.269;
 
 % Angles
 climb_angle_rad = 5.0 * (pi / 180.0); % 5 deg climb
-desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent
+desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent standard
 
 % ==========================================
 % 2. MAIN MISSION PROFILE CALCULATIONS
@@ -26,15 +26,15 @@ desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent
 % Climb Segment
 climb_rate = v_climb_ftmin * sin(climb_angle_rad);  % ft/min
 climb_time = cruise_alt / climb_rate;               % min
-climb_dist_ft = climb_time * v_climb_ftmin * cos(climb_angle_rad); %ft
+climb_dist_ft = climb_time * v_climb_ftmin * cos(climb_angle_rad);
 
 % Descent Segment
 desc_rate = v_desc_ftmin * sin(desc_angle_rad);     % ft/min
 desc_time = cruise_alt / desc_rate;                % min
-desc_dist_ft = desc_time * v_desc_ftmin * cos(desc_angle_rad); %ft
+desc_dist_ft = desc_time * v_desc_ftmin * cos(desc_angle_rad);
 
 % Cruise Segment (Main Mission Range Balance)
-cruise_dist_ft = total_range_ft - climb_dist_ft - desc_dist_ft; %ft
+cruise_dist_ft = total_range_ft - climb_dist_ft - desc_dist_ft;
 cruise_time = cruise_dist_ft / v_cruise_ftmin;     % min
 
 main_loiter_time = 15.0; % min (Approach / Pattern)
@@ -93,12 +93,13 @@ end
 
 % Annotation labels: {Name, Y-position, Distance string}
 labels = {'Startup', 'Climb', 'Cruise', 'Descent', 'Loiter', ...
-          sprintf('Reserve\nClimb'), sprintf('Diversion\nCruise'), sprintf('Reserve\nDescent')};
+          sprintf('Reserve\nClimb'), sprintf('Diversion\nCruise'), ...
+          sprintf('Reserve\nHolding'), sprintf('Reserve\nDescent')};
 
-y_positions = [1200, 14000, 26000, 14000, 1200, 5000, 11200, 5000];
+y_positions = [1200, 14000, 26000, 14000, 1200, 5000, 11200, 11200, 5000];
 dist_strings = {'0 nmi', sprintf('%.1f nmi', r_climb), sprintf('%.1f nmi', r_cruise), ...
                 sprintf('%.1f nmi', r_desc), '0 nmi', sprintf('%.1f nmi', r_res_climb), ...
-                sprintf('%.1f nmi', r_res_alt), sprintf('%.1f nmi', r_res_desc)};
+                sprintf('%.1f nmi', r_res_alt), '0 nmi', sprintf('%.1f nmi', r_res_desc)};
 
 for i = 1:length(labels)
     t_mid = (milestones(i) + milestones(i+1)) / 2;
