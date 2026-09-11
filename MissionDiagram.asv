@@ -6,19 +6,23 @@ cruise_alt   = 25000.0;   % ft
 res_alt      = 10000.0;   % ft (for go around)
 total_range_ft = 400.0 * 6076.12; % ft
 
-% Airspeeds
-v_climb_kts  = 155.0;
-v_cruise_kts = 250.0;
-v_desc_kts   = 200.0;
-v_loiter_kts = 135.0; 
+% Reserves Parameter
+reserve_time = 30.0;      % min (30 minute reserve flight profile)
 
-v_climb_ftmin  = v_climb_kts * 101.269;
-v_cruise_ftmin = v_cruise_kts * 101.269;
-v_desc_ftmin   = v_desc_kts * 101.269;
+% Airspeed
+v_climb_kts  = 155.0; % knots
+v_cruise_kts = 250.0; % knots
+v_desc_kts   = 200.0; % knots
+v_loiter_kts = 135.0; % knots
+
+v_climb_ftmin  = v_climb_kts * 101.269; % ft/min
+v_cruise_ftmin = v_cruise_kts * 101.269; % ft/min
+v_desc_ftmin   = v_desc_kts * 101.269; % ft/min
+v_loiter_ftmin = v_loiter_kts * 101.269; % ft/min
 
 % Angles
 climb_angle_rad = 5.0 * (pi / 180.0); % 5 deg climb
-desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent standard
+desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent
 
 % ==========================================
 % 2. MAIN MISSION PROFILE CALCULATIONS
@@ -26,15 +30,15 @@ desc_angle_rad  = 3.0 * (pi / 180.0); % 3 deg descent standard
 % Climb Segment
 climb_rate = v_climb_ftmin * sin(climb_angle_rad);  % ft/min
 climb_time = cruise_alt / climb_rate;               % min
-climb_dist_ft = climb_time * v_climb_ftmin * cos(climb_angle_rad);
+climb_dist_ft = climb_time * v_climb_ftmin * cos(climb_angle_rad); % ft
 
 % Descent Segment
 desc_rate = v_desc_ftmin * sin(desc_angle_rad);     % ft/min
 desc_time = cruise_alt / desc_rate;                % min
-desc_dist_ft = desc_time * v_desc_ftmin * cos(desc_angle_rad);
+desc_dist_ft = desc_time * v_desc_ftmin * cos(desc_angle_rad); % ft
 
 % Cruise Segment (Main Mission Range Balance)
-cruise_dist_ft = total_range_ft - climb_dist_ft - desc_dist_ft;
+cruise_dist_ft = total_range_ft - climb_dist_ft - desc_dist_ft; % ft
 cruise_time = cruise_dist_ft / v_cruise_ftmin;     % min
 
 main_loiter_time = 15.0; % min (Approach / Pattern)
@@ -46,36 +50,30 @@ main_loiter_time = 15.0; % min (Approach / Pattern)
 res_climb_time = res_alt / climb_rate;
 res_climb_dist_ft = res_climb_time * v_climb_ftmin * cos(climb_angle_rad);
 
-% Phase B: Alternate Diversion Cruise (Fixed 50 nmi)
-alt_dist_nmi = 50.0;
-alt_dist_ft  = alt_dist_nmi * 6076.12;
-res_alt_cruise_time = alt_dist_ft / v_cruise_ftmin; % min
-
 % Phase C: Reserve Descent to Alternate Airport
 res_desc_time = res_alt / desc_rate;
 res_desc_dist_ft = res_desc_time * v_desc_ftmin * cos(desc_angle_rad);
 
-% Phase D: Remaining Holding Reserve at L/D_max (0 nmi net distance)
-res_loiter_time = max(0.0, 45.0 - res_climb_time - res_alt_cruise_time - res_desc_time);
+% Phase B: Diversion Cruise Time (Remaining time from the input reserve_time)
+res_alt_cruise_time = reserve_time - res_climb_time - res_desc_time; % min
+res_alt_cruise_dist_ft = res_alt_cruise_time * v_loiter_ftmin; % ft
 
 % Unit Conversions to Nautical Miles
 r_climb     = climb_dist_ft / 6076.12;
 r_cruise    = cruise_dist_ft / 6076.12;
 r_desc      = desc_dist_ft / 6076.12;
 r_res_climb = res_climb_dist_ft / 6076.12;
-r_res_alt   = alt_dist_nmi;
+r_res_alt   = res_alt_cruise_dist_ft / 6076.12;
 r_res_desc  = res_desc_dist_ft / 6076.12;
-r_res_hold  = 0.0; % Holding pattern produces 0 nmi displacement
 
 % ==========================================
 % 4. PLOTTING TIME & ALTITUDE VECTOR
 % ==========================================
 durations = [0, startup_time, climb_time, cruise_time, desc_time, ...
-             main_loiter_time, res_climb_time, res_alt_cruise_time, ...
-             res_loiter_time, res_desc_time];
+             main_loiter_time, res_climb_time, res_alt_cruise_time, res_desc_time, start];
 
 milestones = cumsum(durations);
-altitudes  = [0, 0, cruise_alt, cruise_alt, 0, 0, res_alt, res_alt, res_alt, 0];
+altitudes  = [0, 0, cruise_alt, cruise_alt, 0, 0, res_alt, res_alt, 0];
 
 t_total = milestones(end);
 t_vec = linspace(0, t_total, 1000);
@@ -92,14 +90,14 @@ for i = 2:length(milestones)-1
 end
 
 % Annotation labels: {Name, Y-position, Distance string}
-labels = {'Startup', 'Climb', 'Cruise', 'Descent', 'Loiter', ...
-          sprintf('Reserve\nClimb'), sprintf('Diversion\nCruise'), ...
-          sprintf('Reserve\nHolding'), sprintf('Reserve\nDescent')};
+labels = {'Startup', 'Climb', 'Cruise', 'Descent', 'Go Around', ...
+          sprintf('Reserve\nClimb'), sprintf('Diversion\nCruise'), sprintf('Reserve\nDescent')};
 
-y_positions = [1200, 14000, 26000, 14000, 1200, 5000, 11200, 11200, 5000];
+y_positions = [1200, 14000, 26000, 14000, 1200, 5000, 11200, 5000];
+
 dist_strings = {'0 nmi', sprintf('%.1f nmi', r_climb), sprintf('%.1f nmi', r_cruise), ...
                 sprintf('%.1f nmi', r_desc), '0 nmi', sprintf('%.1f nmi', r_res_climb), ...
-                sprintf('%.1f nmi', r_res_alt), '0 nmi', sprintf('%.1f nmi', r_res_desc)};
+                sprintf('%.1f nmi', r_res_alt), sprintf('%.1f nmi', r_res_desc), '0 nmi'};
 
 for i = 1:length(labels)
     t_mid = (milestones(i) + milestones(i+1)) / 2;
@@ -109,7 +107,7 @@ for i = 1:length(labels)
         'BackgroundColor', 'w', 'EdgeColor', [0 0 0.5], 'Margin', 3);
 end
 
-title('FAR 23 Mission Profile with Realistic IFR Alternate & Reserve Breakdown', 'FontSize', 12, 'FontWeight', 'bold');
+title('FAR 23 Mission Profile with 30-Minute Reserve Flight Time', 'FontSize', 12, 'FontWeight', 'bold');
 xlabel('Time (minutes)', 'FontSize', 11);
 ylabel('Altitude (feet)', 'FontSize', 11);
 ylim([-1000, 29000]);
