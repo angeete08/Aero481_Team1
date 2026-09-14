@@ -1,0 +1,63 @@
+%% Cost Estimate 
+
+% ==========================================
+% 1. PARAMETERS & INPUTS
+% ==========================================
+MTOW = 8500*2.20462262; %lbs
+base_year = 2026;
+then_year = 2035;
+t_b = 3; %hrs Note that we accounted for reserve here
+n_attd = 1;
+W_f = 1500; %lbs (weight of fuel)
+P_f = 6.50; %USD per gallon on fuel
+rho_f = 3.32; %Density of fuel
+W_oil = 1500; %lbs (weight of oil)
+P_oil = 6.50; %USD per gallon on oil
+rho_oil = 3.32; %Density of oil
+R = 480; %nmi Note that we accounted for reserve here
+T_0 = 1000; %lbs (maximum engine thrust)
+SHP_to = 1000; %specific-power 
+R_l = 20; %USD per hour (labor rate)
+n_engines = 8; % number of engines
+IR_a = 0.02; % insurance rate 
+
+% ==========================================
+% 2. Coefficients
+% ==========================================
+b_cef = 5.17053 + 0.104981*(base_year - 2006);
+t_cef = 5.17053 + 0.104981*(then_year - 2006);
+cef = t_cef/b_cef;
+
+% ==========================================
+% 3. Calculate Aircraft Costs
+% ==========================================
+% Crew
+C_crew = (440 + 0.532*(MTOW/1000))*(cef)*(t_b);
+% Attendants
+C_attd = 60 * n_attd * cef * t_b;
+% Fuel
+C_fuel = 1.02 * W_f * (P_f/rho_f);
+% Oil
+C_oil = 1.02 * W_oil * (P_oil/rho_oil);
+% Airport
+C_airport = 1.5 * (MTOW/1000) * cef;
+% Navigation
+C_navigation = 0.5 * cef * ((1.852 * R)/t_b)*(sqrt(0.00045359237 * MTOW)/50);
+% Engine maintenance
+C_ml = (0.645 + ((0.05*T_0)/10^4)) * (0.566 + (0.434/t_b)) * R_l;
+C_mm_general = ((25 + ((18*T_0)/10^4))) * (0.62 + (0.38/t_b)) * cef;
+C_mm_turboprop = 1.03 * 1.3 * (0.4956 + 0.0532*(SHP_to/(n_engines * 1000))*(1100/H_em) + 0.1) * R_l;
+C_engine_maintenance = n_engines * (C_ml + C_mm_turboprop) * t_b;
+
+C_aircraft = C_crew + C_attd + C_fuel + C_oil + C_airport + 
+
+
+
+% Insurance
+U_annual = 1.5*(10^3) * ((3.4546 * t_b) + 2.994 - ((12.289*t_b^2) - (5.6626*t_b) + 8.964))^0.5;
+C_insurance = ((IR_a * C_aircraft)/U_annual) * t_b;
+
+
+
+
+
