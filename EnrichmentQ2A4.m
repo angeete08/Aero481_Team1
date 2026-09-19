@@ -13,7 +13,7 @@ S = (1/9) * b^2; %For initial AR of 9
 S_new = S * 1.05;
 
 AR = b^2 / S;
-AR_new = AR * 1.05;
+AR_new = b_new^2 / S_new;
 
 % C_D = KC_L^2 + C_D0
 % C_D - C_D_0 = KC_L^2
