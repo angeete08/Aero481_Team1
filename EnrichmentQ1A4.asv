@@ -21,15 +21,14 @@ Di_init = getFactor(AR);
 Di_final = getFactor(AR_new);
 
 disp("Enrichment Q1: ");
-disp("Initial Di: " + Di_init);
-disp("New Di: " + Di_final);
-percentChange = (Di_final - Di_init)/Di_init * 100;
-disp("Percent Change in Di: " + percentChange);
+disp("Initial Di: " + C_di_init);
+disp("New Di: " + C_di_final);
+percentChange = (C_di_final - C_di_init)/C_di_init * 100;
+disp("Percent Change in C_Di: " + percentChange);
 
-function Di_factor = getFactor(AR)
+function C_Di_factor = getFactor(AR)
     e = (1.05 + 0.007*pi*AR)^-1;
     C_Di_factor = 1/(pi*AR*e);
-    Di_factor = C_Di_factor;
 end
 
 
