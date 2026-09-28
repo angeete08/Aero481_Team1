@@ -290,7 +290,8 @@ end
 
 WS_landing_max_Nm2 = max(WS_Nm2(landingOK));
 
-% 6B. Optional stall-speed limit
+% 6B. Optional stall-speed limit (Defined as false, can be set later if
+% needed)
 if use_stall_constraint
     WS_stall_max_Nm2 = stallWsLimitSI( ...
         Vstall_limit_ms,rho_field,CLmax_L,beta_landing);
@@ -308,6 +309,8 @@ WS_vertical_limit_Nm2 = min(WS_landing_max_Nm2,WS_stall_max_Nm2);
 % Ground-roll aerodynamic coefficients are evaluated at the representative
 % takeoff lift coefficient associated with V_R = k_rotation*V_s.
 K_TO_constraint = 1/(pi*AR*e_TO);
+% set L = W = 1/2 * rho * V^2 * S * CL for the different V and CL, then
+% solve for one in terms of other
 CL_ground_TO = CLmax_TO/k_rotation^2;
 CD_ground_TO = CD0_TO_GD + K_TO_constraint*CL_ground_TO^2;
 
@@ -1147,7 +1150,7 @@ function [PWinstalled_WN,geometryOK,sg_m,str_m,scl_m,htr_m] = ...
     % If the full transition remains below the obstacle, use all three
     % phases exactly as in the source. If the transition itself reaches
     % the obstacle, stop the distance accounting at the obstacle crossing.
-    belowObstacle = htr_full_m < hObstacle_m;
+    belowObstacle = htr_full_m < hObstacle_m; % Mask as to whether we are below obstacle
 
     str_m = zeros(size(WS_Nm2));
     htr_m = zeros(size(WS_Nm2));
