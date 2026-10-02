@@ -1,3 +1,7 @@
+%Output = Weight_Predict(400, 225, 10000, 18, 8, "electric", 200);
+%disp(Output)
+
+
 function [Results] = Weight_Predict(range_nmi, cruise_kt, altitude_ft, LD, num_people, text, electricRange_nmi)
 %% ========================================================================
 %  1. DESIGN INPUTS
@@ -80,7 +84,7 @@ else
 end
 
 % ----- Future battery assumptions -----
-pack_Whkg  = 750;               % PACK-level specific energy [Wh/kg]
+pack_Whkg  = 600;               % PACK-level specific energy [Wh/kg]
 usableSOC  = 0.85;              % Usable fraction of nominal battery energy
 pack_kWkg  = 2.0;               % Pack specific power [kW/kg]
 

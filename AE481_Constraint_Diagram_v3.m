@@ -86,7 +86,7 @@ dT_5000_C = 10;
 % ========================================================================
 
 %% 3A. General configuration
-AR = 10.0;                               % aspect ratio (Twin Otter)
+AR = 6.0;                               % aspect ratio (Twin Otter)
 
 h_cruise_m = 10000*0.3048;              % 3048 m preliminary cruise altitude
 dT_cruise_C = 0;
