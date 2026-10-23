@@ -92,8 +92,8 @@ p.Cf_equiv = 0.0030;
 p.LD_ref   = 18;           % preserve current weight-code L/D at baseline S
 
 p.CLmax_clean = 1.80;
-p.CLmax_TO    = 4.0;
-p.CLmax_L     = 5.0;
+p.CLmax_TO    = 7.0;
+p.CLmax_L     = 8.0;
 p.dCD0_TO_flaps = 0.015;
 p.dCD0_L_flaps  = 0.065;
 p.dCD0_gear     = 0.020;
