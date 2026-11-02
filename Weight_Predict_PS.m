@@ -6,8 +6,10 @@ function r = Weight_Predict_PS(S_m2,P_installed_kW,p)
 % Inputs
 %   S_m2              reference wing area [m^2]
 %   P_installed_kW     total installed propulsive shaft power [kW]
-%   p                  parameter structure created by
-%                      AE481_PS_Environmental_Parametric.m
+%   p                 parameter structure initialized in 
+%                     AE481_PS_Environmental_Parametric.m, incorporating 
+%                     design assumptions and constraints from the 
+%                     P/W vs. W/S constraint diagram workflow.
 %
 % This is intentionally a SIMPLE, anchored implementation of the Metabook
 % Section 4.12 / Algorithm 2 idea: W0 = f(S,P). The current historical

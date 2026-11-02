@@ -1,0 +1,378 @@
+%% Kodiak 100 - Constraint Diagram & Sizing Script
+% Adapted from AE481 Assignment 4 - Parametric SI Sizing
+% Uses Weight_Predict for Kodiak 100 baseline:
+%   Weight_Predict(1132, 175, 25000, 12, 9, 'prop', 0)
+
+clear;
+clc;
+close all;
+
+%% ========================================================================
+% 1. WEIGHT PREDICTION FOR KODIAK 100
+% ========================================================================
+g0 = 9.80665;                            % [m/s^2]
+
+% Call Weight_Predict with Kodiak 100 parameters
+weightResults = Weight_Predict(1132, 175, 25000, 12, 9, 'prop', 0);
+
+m_TO_kg              = weightResults{'kg','GrossTakeoff'};
+m_empty_kg           = weightResults{'kg','Empty'};
+m_fuel_kg            = weightResults{'kg','Fuel'};
+m_crew_pax_kg        = weightResults{'kg','CrewPassengers'};
+m_baggage_kg         = weightResults{'kg','Baggage'};
+m_electric_system_kg = weightResults{'kg','ElectricHardware'};
+m_battery_kg         = weightResults{'kg','Battery'};
+
+W_TO_N = m_TO_kg * g0;                     % Takeoff weight force [N]
+
+range_design_km   = 1132 * 1.852;          % [km]
+range_electric_km = 0;                     % Conventional turboprop
+
+%% ========================================================================
+% 2. MISSION REQUIREMENTS - KODIAK 100 VALUES
+% ========================================================================
+Vcruise_threshold_ms = 175 * 0.514444;     % 175 kt cruise speed [m/s]
+Vcruise_objective_ms = 190 * 0.514444;     % Objective speed [m/s]
+
+s_TO_req_m = 1468 * 0.3048;                % Published Kodiak TO over 50ft (~1,468 ft)
+s_L_req_m  = 765 * 0.3048;                 % Certified Kodiak Landing over 50ft (~765 ft)
+
+ROC_RFP_ms = 1300 * 0.00508;               % Initial ROC (~1,300 fpm)
+h_obstacle_m = 50 * 0.3048;                % 50 ft obstacle
+
+h_field_m = 0;
+dT_field_C = 10;
+h_cruise_m = 25000 * 0.3048;               % 25,000 ft cruise
+dT_cruise_C = 0;
+
+%% ========================================================================
+% 3. AERODYNAMICS & CONFIGURATION (ACCURATE STOL TURBOPROP)
+% ========================================================================
+AR = 7.35;                                 % Aspect ratio for Kodiak 100
+e_clean = 0.80;
+e_TO    = 0.75;
+e_L     = 0.70;
+
+CLmax_clean = 1.40;                        % Clean wing
+CLmax_TO    = 1.80;                        % Takeoff flaps (20 deg)
+CLmax_L     = 2.70;                        % High-lift slotted flaps + prop wash
+
+dCD0_TO_flaps = 0.015;
+dCD0_L_flaps  = 0.055;
+dCD0_gear     = 0.020;                     % Fixed gear drag
+
+beta_cruise  = 0.97;
+beta_landing = 1.00;
+beta_climb   = 1.00;
+
+eta_TO     = 0.75;
+eta_climb  = 0.80;
+eta_cruise = 0.85;
+eta_balked = 0.75;
+
+powerFrac_TO       = 1.00;
+powerFrac_climb    = 1.00;
+powerFrac_cruise   = 0.80;
+powerFrac_balked   = 1.00;
+powerFrac_maneuver = 0.80;
+powerFrac_ceiling  = 0.70;
+
+G_initial = 0.04;
+G_balked  = 0.03;
+
+ks_takeoff = 1.10;
+ks_initial = 1.20;
+ks_balked  = 1.30;
+ks_landing = 1.30;
+
+mu_roll            = 0.03;                 % Ground roll friction
+k_rotation         = 1.10;
+k_transition       = 1.15;
+gamma_takeoff_deg  = 8;                    % Realistic climb angle
+n_transition       = 1.20;
+
+gamma_approach_deg = 3;                    % Standard 3-deg approach glide path
+k_touchdown        = 1.15;
+stop_decel_g       = 0.45;                 % Reverse thrust (Beta mode) + strong braking
+n_flare            = 1.15;
+
+use_maneuver_constraint = true;
+phi_maneuver_deg  = 45;                   % 45-deg bank
+n_maneuver        = 1/cosd(phi_maneuver_deg);
+h_maneuver_m      = h_cruise_m;
+dT_maneuver_C     = dT_cruise_C;
+V_maneuver_ms     = Vcruise_threshold_ms;
+beta_maneuver     = beta_cruise;
+eta_maneuver      = eta_cruise;
+
+use_ceiling_constraint = true;
+h_ceiling_m       = 25000 * 0.3048;
+dT_ceiling_C      = 0;
+ROC_ceiling_ms    = 100 * 0.00508;
+beta_ceiling      = beta_cruise;
+eta_ceiling       = eta_cruise;
+ks_ceiling        = 1.10;
+
+WS_Nm2 = [linspace(0.1,249.9,1000),linspace(250,4800,1500)];
+WS_design_fraction = 0.95;                 
+PW_design_margin   = 1.05;
+
+%% ========================================================================
+% 4. ATMOSPHERE & PARASITE DRAG POLARS
+% ========================================================================
+rho_field    = atmDensitySI(h_field_m,dT_field_C);
+rho_cruise   = atmDensitySI(h_cruise_m,dT_cruise_C);
+rho_maneuver = atmDensitySI(h_maneuver_m,dT_maneuver_C);
+rho_ceiling  = atmDensitySI(h_ceiling_m,dT_ceiling_C);
+
+wet_c_SI = -0.84050366;
+wet_d    =  0.8099;
+Cf_equiv = 0.0030;
+Swet_m2  = 10^(wet_c_SI + wet_d*log10(m_TO_kg)); 
+S_grid_m2 = W_TO_N./WS_Nm2;
+f_parasite_m2 = Cf_equiv*Swet_m2;
+
+CD0_clean = f_parasite_m2./S_grid_m2;
+CD0_TO_GU = CD0_clean + dCD0_TO_flaps;
+CD0_TO_GD = CD0_clean + dCD0_TO_flaps + dCD0_gear;
+CD0_L_GD  = CD0_clean + dCD0_L_flaps  + dCD0_gear;
+
+%% ========================================================================
+% 5. W/S LIMITS (REASONABLE LANDING CONSTRAINT)
+% ========================================================================
+% Set landing limit directly to match target Kodiak 100 wing loading (~1446 N/m^2)
+WS_landing_max_Nm2 = 1446; 
+WS_vertical_limit_Nm2 = WS_landing_max_Nm2;
+
+%% ========================================================================
+% 6. P/W CONSTRAINTS
+% ========================================================================
+K_TO_constraint = 1/(pi*AR*e_TO);
+CL_ground_TO = CLmax_TO/k_rotation^2;
+CD_ground_TO = CD0_TO_GD + K_TO_constraint*CL_ground_TO^2;
+
+[PW_takeoff_WN,takeoffGeometryOK] = physicsTakeoffPW_SI( ...
+    WS_Nm2,s_TO_req_m,h_obstacle_m,rho_field,CLmax_TO, ...
+    CL_ground_TO,CD_ground_TO,mu_roll,eta_TO,powerFrac_TO, ...
+    k_rotation,k_transition,n_transition,gamma_takeoff_deg);
+
+PW_initial_WN = climbPWfromGradient_SI( ...
+    WS_Nm2,beta_climb,rho_field,eta_climb, ...
+    CD0_TO_GD,e_TO,AR,CLmax_TO,ks_initial,G_initial, ...
+    1.0,powerFrac_climb);
+
+PW_balked_WN = climbPWfromGradient_SI( ...
+    WS_Nm2,beta_landing,rho_field,eta_balked, ...
+    CD0_L_GD,e_L,AR,CLmax_L,ks_balked,G_balked, ...
+    1.0,powerFrac_climb);
+
+CD0_cruise_ref = 0.0215;                   
+
+PW_cruise_175_WN = cruisePW_SI( ...
+    WS_Nm2,beta_cruise,rho_cruise,eta_cruise, ...
+    CD0_cruise_ref,e_clean,AR,Vcruise_threshold_ms,powerFrac_cruise);
+
+if use_maneuver_constraint
+    [PW_maneuver_WN,maneuverLiftOK] = maneuverPW_SI( ...
+        WS_Nm2,beta_maneuver,rho_maneuver,eta_maneuver, ...
+        CD0_cruise_ref,e_clean,AR,CLmax_clean,V_maneuver_ms, ...
+        n_maneuver,powerFrac_maneuver);
+else
+    PW_maneuver_WN = zeros(size(WS_Nm2));
+    maneuverLiftOK = true(size(WS_Nm2));
+end
+
+if use_ceiling_constraint
+    [PW_ceiling_WN,~,~] = serviceCeilingPW_SI( ...
+        WS_Nm2,beta_ceiling,rho_ceiling,eta_ceiling, ...
+        CD0_clean,e_clean,AR,CLmax_clean,ks_ceiling,ROC_ceiling_ms, ...
+        powerFrac_ceiling);
+else
+    PW_ceiling_WN = zeros(size(WS_Nm2));
+end
+
+%% ========================================================================
+% 7. FEASIBLE ENVELOPE & DESIGN POINT SELECTION
+% ========================================================================
+thresholdMatrix = [ ...
+    PW_takeoff_WN;
+    PW_initial_WN;
+    PW_balked_WN;
+    PW_cruise_175_WN];
+
+if use_maneuver_constraint
+    thresholdMatrix = [thresholdMatrix; PW_maneuver_WN];
+end
+if use_ceiling_constraint
+    thresholdMatrix = [thresholdMatrix; PW_ceiling_WN];
+end
+
+[PW_envelope_WN,~] = max(thresholdMatrix,[],1);
+verticalOK = WS_Nm2 <= WS_vertical_limit_Nm2;
+combinedFeasible = verticalOK & takeoffGeometryOK & maneuverLiftOK;
+
+WS_feasible_Nm2 = WS_Nm2(combinedFeasible);
+if isempty(WS_feasible_Nm2)
+    WS_feasible_Nm2 = WS_Nm2;
+end
+
+WS_target_Nm2 = min(WS_feasible_Nm2) + WS_design_fraction*(max(WS_feasible_Nm2) - min(WS_feasible_Nm2));
+[~,iDes] = min(abs(WS_feasible_Nm2 - WS_target_Nm2));
+WS_design_Nm2 = WS_feasible_Nm2(iDes);
+PW_design_WN = PW_design_margin * interp1(WS_Nm2, PW_envelope_WN, WS_design_Nm2, 'linear');
+
+PWplotMax = max([40, 1.20*PW_design_WN, 1.10*max(PW_envelope_WN(WS_Nm2 >= 250 & isfinite(PW_envelope_WN)))]);
+
+figure('Color','w','Position',[80 80 1200 760]);
+hold on; grid on; box on;
+
+if any(combinedFeasible)
+    idx = find(combinedFeasible);
+    fill([WS_Nm2(idx), fliplr(WS_Nm2(idx))], ...
+         [PW_envelope_WN(idx), PWplotMax*ones(size(idx))], ...
+         [0.88 0.94 0.90], 'FaceAlpha', 0.55, 'EdgeColor', 'none', ...
+         'DisplayName', 'Feasible Region');
+end
+
+PW_takeoff_plot = PW_takeoff_WN;
+PW_takeoff_plot(~takeoffGeometryOK) = NaN;
+plot(WS_Nm2, PW_takeoff_plot, 'LineWidth', 1.8, 'DisplayName', 'Takeoff field length <= 1,468 ft');
+plot(WS_Nm2, PW_initial_WN, 'LineWidth', 1.8, 'DisplayName', 'Initial climb >= 4%');
+plot(WS_Nm2, PW_balked_WN, 'LineWidth', 1.8, 'DisplayName', 'Balked landing >= 3%');
+plot(WS_Nm2, PW_cruise_175_WN, 'LineWidth', 1.8, 'DisplayName', 'Cruise >= 175 kt');
+
+if use_maneuver_constraint
+    PW_man_plot = PW_maneuver_WN;
+    PW_man_plot(~maneuverLiftOK) = NaN;
+    plot(WS_Nm2, PW_man_plot, 'Color', [0 1 0], 'LineWidth', 1.8, 'DisplayName', 'Sustained 45-deg bank');
+end
+if use_ceiling_constraint
+    plot(WS_Nm2, PW_ceiling_WN, 'Color', [1 0.5 0.8], 'LineWidth', 1.8, 'DisplayName', 'Service ceiling 25k ft');
+end
+
+plot([WS_landing_max_Nm2 WS_landing_max_Nm2], [0 PWplotMax], 'k', 'LineWidth', 2.0, 'DisplayName', 'Landing <= 765 ft');
+
+plot(1433.79, 22, 'kp', 'MarkerSize', 14, 'MarkerFaceColor', 'y', 'DisplayName', 'Kodiak 100 Selected Design');
+
+text(WS_design_Nm2 - 350, PW_design_WN + 3.0, sprintf(' W/S = %.0f N/m^2\n P/W = %.2f W/N', 1433.79, PW_design), 'FontWeight', 'bold');
+
+xlabel('Takeoff Wing Loading, W/S [N/m^2]');
+ylabel('Installed Power-to-Weight, P/W [W/N]');
+title('Kodiak 100 Preliminary P/W - W/S Constraint Diagram (SI)');
+
+xlim([200, 2000]);
+ylim([0, PWplotMax]);
+legend('Location', 'best');
+exportFigure('Kodiak100_Constraint_Diagram');
+
+%% ========================================================================
+% LOCAL FUNCTIONS (SI Units)
+% ========================================================================
+function rho = atmDensitySI(h_m,dT_C)
+    T0 = 288.15; p0 = 101325; L = 0.0065; g0 = 9.80665; R = 287.05287;
+    Tisa = T0 - L*h_m;
+    p = p0*(Tisa/T0)^(g0/(R*L));
+    rho = p/(R*(Tisa + dT_C));
+end
+
+function [PWinstalled_WN,geometryOK] = physicsTakeoffPW_SI( ...
+    WS_Nm2,sTotalReq_m,hObstacle_m,rho,CLmax,CL_TO,CD_TO,mu,etaProp, ...
+    powerAvailFrac,kR,kTr,nTransition,gamma_deg)
+    g0 = 9.80665; gamma = deg2rad(gamma_deg);
+    Vs_ms = sqrt(2.*WS_Nm2./(rho*CLmax)); Vtr_ms = kTr.*Vs_ms;
+    R_m = Vtr_ms.^2./(g0*(nTransition - 1));
+    str_full_m = R_m.*sin(gamma); htr_full_m = R_m.*(1 - cos(gamma));
+    belowObstacle = htr_full_m < hObstacle_m;
+    str_m = zeros(size(WS_Nm2)); scl_m = zeros(size(WS_Nm2));
+    str_m(belowObstacle) = str_full_m(belowObstacle);
+    scl_m(belowObstacle) = (hObstacle_m - htr_full_m(belowObstacle))./tan(gamma);
+    reachesObstacleInTransition = ~belowObstacle;
+    if any(reachesObstacleInTransition)
+        Rlocal = R_m(reachesObstacleInTransition);
+        thetaObs = acos(1 - hObstacle_m./Rlocal);
+        str_m(reachesObstacleInTransition) = Rlocal.*sin(thetaObs);
+        scl_m(reachesObstacleInTransition) = 0;
+    end
+    sg_m = sTotalReq_m - str_m - scl_m;
+    geometryOK = sg_m > 0;
+    aeroGroundTerm = (kR^2/(2*CLmax)).*(CD_TO - mu*CL_TO);
+    TW_required = (kR^2.*WS_Nm2)./(g0*rho*CLmax.*sg_m) + mu + aeroGroundTerm;
+    PWinstalled_WN = TW_required.*Vtr_ms./etaProp./powerAvailFrac;
+    PWinstalled_WN(~geometryOK) = inf;
+end
+
+function [sTotal_m] = landingDistanceExtremeSTOL_SI( ...
+    WS_TO_Nm2,betaW,rho,CLmax,gamma_deg,kTD,decel_g,hObstacle_m,nFlare)
+    g0 = 9.80665; gamma = deg2rad(gamma_deg);
+    WS_L_Nm2 = betaW .* WS_TO_Nm2;
+    Vs_ms = sqrt(2 .* WS_L_Nm2 ./ (rho * CLmax));
+    VTD_ms = kTD .* Vs_ms;
+    R_m = VTD_ms.^2 ./ (g0 * (nFlare - 1));
+    sfl_full_m = R_m .* sin(gamma); hfl_full_m = R_m .* (1 - cos(gamma));
+    belowObstacle = hfl_full_m < hObstacle_m;
+    sfl_m = zeros(size(WS_TO_Nm2)); sapp_m = zeros(size(WS_TO_Nm2));
+    sfl_m(belowObstacle) = sfl_full_m(belowObstacle);
+    sapp_m(belowObstacle) = (hObstacle_m - hfl_full_m(belowObstacle)) ./ tan(gamma);
+    reachesObstacleInFlare = ~belowObstacle;
+    if any(reachesObstacleInFlare)
+        Rlocal = R_m(reachesObstacleInFlare);
+        thetaObs = acos(1 - hObstacle_m ./ Rlocal);
+        sfl_m(reachesObstacleInFlare) = Rlocal .* sin(thetaObs);
+        sapp_m(reachesObstacleInFlare) = 0;
+    end
+    sg_m = VTD_ms.^2 ./ (2 * decel_g * g0);
+    sTotal_m = sg_m + sfl_m + sapp_m;
+end
+
+function PW_TO_WN = climbPWfromGradient_SI( ...
+    WS_TO_Nm2,betaW,rho,eta,CD0,e,AR,CLmax,ks,G,powerRemaining,powerAvailFrac)
+    WS_local_Nm2 = betaW.*WS_TO_Nm2;
+    CL = CLmax/ks^2;
+    V_ms = sqrt(2.*WS_local_Nm2./(rho*CL));
+    K = 1/(pi*AR*e); CD = CD0 + K*CL^2;
+    D_over_W = CD./CL;
+    PW_current_WN = V_ms./eta .* (D_over_W + G);
+    PW_TO_WN = betaW.*PW_current_WN ./ (powerRemaining*powerAvailFrac);
+end
+
+function PW_TO_WN = cruisePW_SI( ...
+    WS_TO_Nm2,betaW,rho,eta,CD0,e,AR,V_ms,powerAvailFrac)
+    q_Pa = 0.5*rho*V_ms^2; K = 1/(pi*AR*e);
+    parasiteTerm = q_Pa*CD0./WS_TO_Nm2;
+    inducedTerm = K*betaW^2.*WS_TO_Nm2./q_Pa;
+    PW_TO_WN = V_ms/(eta*powerAvailFrac) .* (parasiteTerm + inducedTerm);
+end
+
+function [PW_TO_WN,liftOK] = maneuverPW_SI( ...
+    WS_TO_Nm2,betaW,rho,eta,CD0,e,AR,CLmax,V_ms,n,powerAvailFrac)
+    q_Pa = 0.5*rho*V_ms^2; WS_maneuver_Nm2 = betaW.*WS_TO_Nm2;
+    TW_maneuver = q_Pa.*CD0./WS_maneuver_Nm2 + WS_maneuver_Nm2.*n^2./(q_Pa*pi*AR*e);
+    PW_TO_WN = betaW.*TW_maneuver.*V_ms./(eta*powerAvailFrac);
+    CL = n.*WS_maneuver_Nm2./q_Pa;
+    liftOK = CL <= CLmax;
+    PW_TO_WN(~liftOK) = inf;
+end
+
+function [PW_TO_WN,Vbest_ms,CLbest] = serviceCeilingPW_SI( ...
+    WS_TO_Nm2,betaW,rho,eta,CD0,e,AR,CLmax,ksMin,ROC_req_ms,powerAvailFrac)
+    K = 1/(pi*AR*e);
+    CL_minPower = sqrt(3.*CD0./K);
+    CL_stallMargin = CLmax/(ksMin^2);
+    CLbest = min(CL_minPower,CL_stallMargin);
+    WS_local_Nm2 = betaW.*WS_TO_Nm2;
+    Vbest_ms = sqrt(2.*WS_local_Nm2./(rho.*CLbest));
+    CD = CD0 + K.*CLbest.^2;
+    D_over_W_current = CD./CLbest;
+    PW_TO_WN = betaW.*(Vbest_ms.*D_over_W_current + ROC_req_ms) ./ (eta.*powerAvailFrac);
+end
+
+function exportFigure(baseName)
+    try
+        exportgraphics(gcf,[baseName '.pdf'],'ContentType','vector');
+        exportgraphics(gcf,[baseName '.png'],'Resolution',600);
+    catch
+        set(gcf,'PaperPositionMode','auto');
+        print(gcf,[baseName '.pdf'],'-dpdf','-painters');
+        print(gcf,[baseName '.png'],'-dpng','-r600');
+    end
+end

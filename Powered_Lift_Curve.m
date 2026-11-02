@@ -173,7 +173,7 @@ for k = 1:nCase
     liftAt = @(a) CL_unpowered(a, flap_deg) ...
         + poweredIncrement(a, deltaJ_deg, deltaCJ(k));
     a1 = linspace(-5, alpha_allow(k), 150);
-    a2 = linspace(alpha_allow(k), min(alpha_stall(k),20), 80);
+    a2 = linspace(alpha_allow(k), min(alpha_stall(k),30), 80);
     plot(a1, liftAt(a1), '-', 'Color', colors(k,:), 'LineWidth', 2, ...
         'DisplayName', sprintf('Shaft power: %.0f kW',Pshaft_W(k)/1000));
     plot(a2, liftAt(a2), '--', 'Color', colors(k,:), 'LineWidth', 1.4, ...
@@ -184,7 +184,7 @@ for k = 1:nCase
         plot(alpha_stall(k), CL_max_model(k), 'x', 'Color', colors(k,:), ...
             'LineWidth', 2, 'MarkerSize', 9, 'HandleVisibility','off');
     else
-        plot(20, CL_at_curve_end(k), 's', 'Color', colors(k,:), ...
+        plot(30, CL_at_curve_end(k), 's', 'Color', colors(k,:), ...
             'MarkerSize', 7, 'LineWidth', 1.5, 'HandleVisibility','off');
     end
 end
@@ -204,7 +204,7 @@ ylabel('Effective aircraft lift coefficient, C_L');
 %     V_kt, flap_deg, sigma), ...
 %     sprintf('Solid: operating range | Dashed: margin to stall/fit limit (%.0f deg margin)', ...
 %     margin_deg)});
-xlim([-5 20]);
+xlim([-5 32]);
 legend('Location','best');
 set(gca,'FontSize',11);
 

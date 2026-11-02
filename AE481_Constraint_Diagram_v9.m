@@ -95,7 +95,7 @@ dT_5000_C = 10;
 %% 3A. General configuration
 AR = 6.0;                               % aspect ratio (Twin Otter)
 
-h_cruise_m = 10000*0.3048;              % 3048 m preliminary cruise altitude
+h_cruise_m = 12000*0.3048;              
 dT_cruise_C = 0;
 
 % Weight fractions
@@ -203,7 +203,7 @@ eta_maneuver      = eta_cruise;
 
 %% 3K. Service-ceiling design requirement
 use_ceiling_constraint = true;
-h_ceiling_m       = 25000*0.3048;         % 7620 m [TEAM DESIGN ASSUMPTION]
+h_ceiling_m       = 12500*0.3048;         
 dT_ceiling_C      = 0;                    % ISA [TEAM DESIGN ASSUMPTION]
 ROC_ceiling_ms    = 100*0.00508;          % 100 ft/min = 0.508 m/s 
 beta_ceiling      = beta_cruise;          % conservative current-weight fraction
@@ -676,7 +676,7 @@ fprintf('Power/lift bank capability: %.1f deg (limit/target %.1f deg)\n', ...
     phi_sustained_available_deg,phi_maneuver_deg);
 fprintf('Maneuver pass         : %d\n',maneuverPassSelected);
 
-fprintf('Service ceiling target: %.0f m (%.0f ft)\n', ...
+fprintf('Service ceiling target: %.1f m (%.1f ft)\n', ...
     h_ceiling_m,h_ceiling_m/0.3048);
 fprintf('Ceiling ROC criterion : %.3f m/s (%.0f ft/min)\n', ...
     ROC_ceiling_ms,ROC_ceiling_ms/0.00508);
@@ -933,7 +933,7 @@ end
 
 if use_ceiling_constraint
     plot(WS_Nm2,PW_ceiling_WN, 'Color', [1 0.5 0.8],'LineWidth',1.8, ...
-        'DisplayName',sprintf('Service ceiling %.0f kft / %.0f fpm', ...
+        'DisplayName',sprintf('Service ceiling %.1f kft / %.1f fpm', ...
         h_ceiling_m/0.3048/1000,ROC_ceiling_ms/0.00508));
 end
 

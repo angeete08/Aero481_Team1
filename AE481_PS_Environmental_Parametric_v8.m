@@ -109,7 +109,7 @@ p.eta_ceiling  = 0.85;
 
 p.powerFrac_TO       = 1.00;
 p.powerFrac_climb    = 1.00;
-p.powerFrac_cruise   = 0.80;
+p.powerFrac_cruise   = 0.94; %CHANGE
 p.powerFrac_balked   = 1.00;
 p.powerFrac_maneuver = 0.80;
 p.powerFrac_ceiling  = 0.70;
@@ -178,7 +178,7 @@ p.h_field_m = 0;
 p.dT_field_C = 10;
 p.h_cruise_m = 10000*0.3048;
 p.dT_cruise_C = 0;
-p.h_ceiling_m = 25000*0.3048;
+p.h_ceiling_m = 12500*0.3048;
 p.dT_ceiling_C = 0;
 p.ROC_ceiling_ms = 100*0.00508;
 
@@ -471,7 +471,7 @@ plotZeroContour(S_grid_m2,P_plot_grid,M_clot,'CLoT climb >= 1%',1.6,cc(4,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_balked,'Balked landing >= 3%',1.6,cc(5,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_cruise,'Cruise >= 225 kt',2.0,cc(6,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_maneuver,'Sustained 60 deg bank',2.0,cc(7,:));
-plotZeroContour(S_grid_m2,P_plot_grid,M_ceiling,'Service ceiling 25,000 ft',1.6,cc(8,:));
+plotZeroContour(S_grid_m2,P_plot_grid,M_ceiling,'Service ceiling 12,500 ft',1.6,cc(8,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_landing,'Landing <= 300 ft',2.0,[1 0.5 0]);
 plotZeroContour(S_grid_m2,P_plot_grid,M_mtow,'Part 23 MTOW <= 19,000 lb',1.6,cc(10,:));
 
