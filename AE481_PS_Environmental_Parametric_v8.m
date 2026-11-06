@@ -305,7 +305,7 @@ plotZeroContour(S_grid_m2,P_plot_grid,M_initial,'Initial climb >= 4%',1.6,cc(3,:
 plotZeroContour(S_grid_m2,P_plot_grid,M_clot,'CLoT climb >= 1%',1.6,cc(4,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_balked,'Balked landing >= 3%',1.6,cc(5,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_cruise,'Cruise >= 225 kt',2.0,cc(6,:));
-plotZeroContour(S_grid_m2,P_plot_grid,M_maneuver,'Sustained 60 deg bank',2.0,cc(7,:));
+plotZeroContour(S_grid_m2,P_plot_grid,M_maneuver,sprintf('Sustained %d deg bank', in.phi_maneuver_deg),2.0,cc(7,:));
 plotZeroContour(S_grid_m2, P_plot_grid, M_ceiling, sprintf('Service ceiling %d ft', in.serviceCeiling), 1.6, cc(8,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_landing,'Landing <= 300 ft',2.0,[1 0.5 0]);
 plotZeroContour(S_grid_m2,P_plot_grid,M_mtow,'Part 23 MTOW <= 19,000 lb',1.6,cc(10,:));
@@ -324,6 +324,7 @@ ylim(plotPowerScale*[min(P_vec_kW) max(P_vec_kW)]);
 
 % Find the feasible point that minimizes CO2 emissions in the P-S sweep
 validFeas = Feasible & isfinite(J_kgCO2eMission);
+
 if any(validFeas(:))
     [~, idxOpt] = min(J_kgCO2eMission(validFeas));
     feasS = S_grid_m2(validFeas);

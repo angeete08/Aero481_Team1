@@ -21,8 +21,8 @@ in.baggagePerPassenger_kg = 13.6075;
 in.crewBaggage_kg = 13.6075;
 in.crew = 1;
 
-in.climb_kt          = 200;     % kts
-in.climb_ftmin       = 1700;    % ft/min
+in.climb_kt          = 120;     % kts
+in.climb_ftmin       = 1500;    % ft/min
 in.descent_kt        = 150;     % kts
 in.descent_ftmin     = 1300;    % ft/min
 
@@ -52,7 +52,7 @@ in.Vcruise_threshold_ms = 225 * 0.514444;     % [m/s]
 in.Vcruise_objective_ms = 250 * 0.514444;     % [m/s]
 in.s_TO_req_m           = 300 * 0.3048;       % 91.44 m
 in.s_L_req_m            = 300 * 0.3048;       % 91.44 m
-in.ROC_RFP_ms           = 1500 * 0.00508;     % 7.62 m/s
+in.ROC_RFP_ms           = in.climb_ftmin * 0.00508;     % 7.62 m/s
 in.h_obstacle_m         = 50 * 0.3048;        % 15.24 m
 
 % Required field condition: sea level, ISA + 18 F = ISA + 10 C
@@ -206,7 +206,7 @@ in.maxWeightIterations  = 1000;
 in.massNumericalLimit_kg = 25000;
 
 % Maneuver requirements
-in.phi_maneuver_deg     = 60;
+in.phi_maneuver_deg     = 30;
 in.n_maneuver           = 1/cosd(in.phi_maneuver_deg);
 in.V_maneuver_ms = in.Vcruise_threshold_ms;
 

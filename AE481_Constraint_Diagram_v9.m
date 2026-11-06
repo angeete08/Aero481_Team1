@@ -164,7 +164,7 @@ eta_prop_elec  = in.etaPropElec;
 
 %% 3J. Maneuver / bank-angle design requirement
 use_maneuver_constraint = true;
-phi_maneuver_deg  = 60;                   
+phi_maneuver_deg  = in.phi_maneuver_deg;                   
 n_maneuver        = 1/cosd(phi_maneuver_deg);
 h_maneuver_m      = h_cruise_m;          
 dT_maneuver_C     = dT_cruise_C;
