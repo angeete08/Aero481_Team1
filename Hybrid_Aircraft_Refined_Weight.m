@@ -229,7 +229,7 @@ function r=evaluateWeight(m0,p)
     etaElectrical = parentIn.etaMotor * parentIn.etaInverter * parentIn.etaCable * parentIn.etaBattery;
     etaOverall    = parentIn.etaProp * etaElectrical;
     
-    if isfield(parentIn, 'LD') && ~isempty(parentIn.LD)
+    if isfield(parentIn, 'LD_ref') && ~isempty(parentIn.LD)
         cruiseLD = parentIn.LD;
     else
         cruiseLD = 12.0; 

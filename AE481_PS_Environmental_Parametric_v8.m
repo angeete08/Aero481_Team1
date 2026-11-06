@@ -104,8 +104,8 @@ plotPowerScale = 1;
 
 nS = 81;
 nP = 91;
-S_vec_m2 = linspace(0.80*S_ref_m2,1.48*S_ref_m2,nS);
-P_vec_kW = linspace(min(0.68*P_ref_kW,0.95*min(engineSystemPower_kW)), ...
+S_vec_m2 = linspace(0.70*S_ref_m2,1.68*S_ref_m2,nS);
+P_vec_kW = linspace(min(0.50*P_ref_kW,1.35*min(engineSystemPower_kW)), ...
     max(1.28*P_ref_kW,1.05*max(engineSystemPower_kW)),nP);
 P_lower_kW = linspace(1,min(P_vec_kW),61);
 P_vec_kW = [P_lower_kW(1:end-1),P_vec_kW];
@@ -326,9 +326,19 @@ ylim(plotPowerScale*[min(P_vec_kW) max(P_vec_kW)]);
 validFeas = Feasible & isfinite(J_kgCO2eMission);
 
 if any(validFeas(:))
-    [~, idxOpt] = min(J_kgCO2eMission(validFeas));
     feasS = S_grid_m2(validFeas);
     feasP = P_grid_kW(validFeas);
+    feasJ = J_kgCO2eMission(validFeas);
+
+    % Normalize S and J between 0 and 1 so they can be combined fairly
+    normS = (feasS - min(feasS)) / (max(feasS) - min(feasS) + eps);
+    normJ = (feasJ - min(feasJ)) / (max(feasJ) - min(feasJ) + eps);
+
+    % Priority weighting: 80% weight on minimizing wing area (S), 20% on CO2 (J)
+    % You can adjust these weights (e.g., 0.7 / 0.3) to fine-tune the star's position.
+    priorityScore = 0.80 * normS + 0.20 * normJ;
+
+    [~, idxOpt] = min(priorityScore);
     optS = feasS(idxOpt);
     optP = feasP(idxOpt);
 else
@@ -436,7 +446,15 @@ function d = evaluatePSPoint(S_m2,P_kW,p)
     feasible = c.geometryOK && c.maneuverLiftOK ...
         && (P_kW >= P_threshold_kW) ...
         && (c.sLanding_m <= p.sLreq_m) ...
-        && (m.mTO_kg <= p.MTOW_limit_kg);
+        && (m.mTO_kg <= p.MTOW_limit_kg) ...
+        && (P_kW - P_takeoff_req_kW >= 0) ...
+        && (P_kW - P_roc_req_kW >= 0) ...
+        && (P_kW - P_initial_req_kW >= 0) ...
+        && (P_kW - P_clot_req_kW >= 0) ...
+        && (P_kW - P_balked_req_kW >= 0) ...
+        && (P_kW - P_cruise_req_kW >= 0) ...
+        && (P_kW - P_maneuver_req_kW >= 0) ...
+        && (P_kW - P_ceiling_req_kW >= 0);
 
     qCruise = 0.5*p.rho_cruise*p.Vcruise225_ms^2;
     CL_electric = W_N/(qCruise*S_m2);

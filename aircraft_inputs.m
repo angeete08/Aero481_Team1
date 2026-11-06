@@ -14,7 +14,7 @@ in.serviceCeiling    = 12500;   % ft
 in.LD                = 16.5;    % Initial estimate
 in.num_people        = 8;
 in.is_electric       = 1;
-in.electricRange_nmi = 200;     % nmi
+in.electricRange_nmi = 100;     % nmi (We recharge after this)
 
 in.personMass_kg = 86.1825;          
 in.baggagePerPassenger_kg = 13.6075;
@@ -52,7 +52,7 @@ in.Vcruise_threshold_ms = 225 * 0.514444;     % [m/s]
 in.Vcruise_objective_ms = 250 * 0.514444;     % [m/s]
 in.s_TO_req_m           = 300 * 0.3048;       % 91.44 m
 in.s_L_req_m            = 300 * 0.3048;       % 91.44 m
-in.ROC_RFP_ms           = in.climb_ftmin * 0.00508;     % 7.62 m/s
+in.ROC_RFP_ms           = 1500 * 0.00508;     % 7.62 m/s
 in.h_obstacle_m         = 50 * 0.3048;        % 15.24 m
 
 % Required field condition: sea level, ISA + 18 F = ISA + 10 C
@@ -136,7 +136,7 @@ in.ks_takeoff           = 1.10;
 in.ks_initial           = 1.20;
 in.ks_CLoT              = 1.20;
 in.ks_balked            = 1.20;
-in.ks_landing           = 1.20;
+in.ks_landing           = 1.15;
 in.ks_ceiling           = 1.10;
 
 % STOL Takeoff & Landing Assumptions
@@ -147,14 +147,14 @@ in.gamma_takeoff_deg    = 15;
 in.n_transition         = 1.50;               
 
 in.gamma_approach_deg   = 15;
-in.k_touchdown          = 1.15;               
+in.k_touchdown          = 1.10;               
 in.stop_decel_g         = 0.69;               
 in.n_flare              = 1.15;              
 
 % Structural Sizing Parameters (Raymer)
 in.Nz_ultimate          = 5.7;
 in.tc_root              = 0.16;
-in.taperRatio           = 0.7;
+in.taperRatio           = 0.9;
 in.sweep25_deg          = 0;
 in.controlSurfaceFraction = 0.30;
 in.kPropulsionGroup     = 1.16;
