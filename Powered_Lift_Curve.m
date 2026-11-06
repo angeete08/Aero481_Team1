@@ -22,7 +22,7 @@ rho = 1.1839;                 % Air density, kg/m^3
 
 % Wing and propeller geometry
 S = 91.74;                       % Wing reference area, m^2
-AR = 6;                       % Aspect ratio (fit is calibrated at AR = 7)
+AR = 8;                       % Aspect ratio (fit is calibrated at AR = 7)
 Nprop = 8;                    % Number of identical blowing propellers
 Dprop = 1.98;          % Diameter per propeller, m; defaults give Ad/S ~ 0.5
 flap_deg = 60;                % Geometric flap deflection, degrees

@@ -1,53 +1,52 @@
-clear; clc; close all;
+function TailData = TailSizing(in, S_design_m2)
+%% ========================================================================
+%  MODULAR EMPENNAGE (TAIL) SIZING FUNCTION
+%  Computes tail areas, spans, and chords based on pipeline wing geometry
+%  ========================================================================
 
-b_wing = 22.02362; % Wing Span [m]
-c_wing = 3.6706; % Wing Chord (since it's a constant chord/rectangular wing) [m]
+% Wing geometry derived from pipeline
+AR = in.AR;
+b_wing = sqrt(AR * S_design_m2); % Wing Span [m]
+c_wing = S_design_m2 / b_wing;   % Mean Wing Chord / Root Chord [m]
 
-Lh = 8; % Horizontal tail moment arm [m]
-Lv = 8; % Vertical tail moment arm [m] 
+% Tail moment arms (default or unpacked from 'in')
+if isfield(in, 'Lh'), Lh = in.Lh; else, Lh = 8.0; end % [m]
+if isfield(in, 'Lv'), Lv = in.Lv; else, Lv = 8.0; end % [m] 
 
-% Used twin turboprop for this
-Vh = 0.90; % Horizontal Tail Volume Coefficient 
-Vv = 0.06; % Vertical Tail Volume Coefficient  %Decreased by 0.01 from raymers
+% Tail volume coefficients
+if isfield(in, 'Vh'), Vh = in.Vh; else, Vh = 0.90; end 
+if isfield(in, 'Vv'), Vv = in.Vv; else, Vv = 0.06; end  
 
-% Control Surface Ratios
-elevator_chord_ratio = 0.30; % Elevator chord as a % of horizontal stab chord (25-30%)
-rudder_chord_ratio = 0.40; % Rudder chord as a % of vertical stab chord (30-40%)
+% Control surface ratios
+elevator_chord_ratio = 0.30; 
+rudder_chord_ratio = 0.40; 
 
-% Target Aspect Ratios for Tail Surfaces (for suggesting dimensions)
-AR_h_target = 3.5; % Typical range 3-4
-AR_v_target = 1.8; % Typical range 1.3-2 (for vertical stabs, height^2/area)
+% Target Aspect Ratios for Tail Surfaces
+AR_h_target = 3.5; 
+AR_v_target = 1.8; 
 
-% Calculate Wing Area
-Sw = b_wing * c_wing;
+% Calculate Horizontal Stabilizer
+Sh = (Vh * S_design_m2 * c_wing) ./ Lh;
 
-% ---- Horizontal Stabilizer Sizing ----
-% Vh = (Sh * Lh) / (Sw * c_wing) -> solve for Sh
-Sh = (Vh * Sw * c_wing) ./ Lh;
+% Calculate Vertical Stabilizer
+Sv = (Vv * S_design_m2 * b_wing) ./ Lv;
 
-% ---- Vertical Stabilizer Sizing ----
-% Vv = (Sv * Lv) / (Sw * b_wing) -> solve for Sv
-Sv = (Vv * Sw * b_wing) ./ Lv;
-
-
-%% 4. SUGGEST PRACTICAL DIMENSIONS AND CONTROL SURFACES
-% Using the target aspect ratio to suggest a practical span and chord.
-% AR = span^2 / area => span = sqrt(AR * area)
-
-% Horizontal Stabilizer
-b_h = sqrt(AR_h_target * Sh); % Suggested span of horizontal stabilizer
-c_h = Sh / b_h; % Suggested chord of horizontal stabilizer
+% Practical Dimensions
+b_h = sqrt(AR_h_target * Sh); 
+c_h = Sh / b_h; 
 elevator_chord = c_h * elevator_chord_ratio;
 
-% Vertical Stabilizer (height is its "span")
-h_v = sqrt(AR_v_target * Sv); % Suggested height of vertical stabilizer
-c_v = Sv / h_v; % Suggested chord of vertical stabilizer
+h_v = sqrt(AR_v_target * Sv); 
+c_v = Sv / h_v; 
 rudder_chord = c_v * rudder_chord_ratio;
 
-fprintf('--- EMPENNAGE DESIGN RESULTS ---\n\n');
+TailData = [Sh, b_h, c_h, Sv, h_v, c_v];
+
+% Print Summary Report
+fprintf('\n--- EMPENNAGE DESIGN RESULTS (PIPELINE INTEGRATED) ---\n');
 fprintf('Based on Wing Span: %.2f m and Chord: %.2f m\n', b_wing, c_wing);
-fprintf('Wing Area (Sw): %.4f m^2\n', Sw);
-fprintf('Tail Moment Arm (Lh, Lv): %.3f m\n\n', Lh);
+fprintf('Wing Area (Sw): %.4f m^2\n', S_design_m2);
+fprintf('Tail Moment Arms (Lh, Lv): %.3f m, %.3f m\n\n', Lh, Lv);
 
 fprintf('--- HORIZONTAL STABILIZER ---\n');
 fprintf('Required Area (Sh): %.4f m^2\n', Sh);
@@ -58,3 +57,4 @@ fprintf('--- VERTICAL STABILIZER ---\n');
 fprintf('Required Area (Sv): %.4f m^2\n', Sv);
 fprintf('Suggested Dimensions -> Height: %.1f m, Chord: %.1f m\n', h_v, c_v);
 fprintf(' - Rudder Chord: %.1f m\n\n', rudder_chord);
+end

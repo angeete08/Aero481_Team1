@@ -1,34 +1,10 @@
 %% AE481 - PARAMETRIC P-S CONSTRAINT DIAGRAM + ENVIRONMENTAL OBJECTIVE
 % M-BRAER Hybrid-Electric STOL Commuter
 %
-% Architecture represented here:
-%   - partial parallel-series hybrid
-%   - one central turboprop engine mechanically coupled to the central propulsor
-%   - one central electric hub motor on the same propulsor
-%   - eight smaller electric propulsors used for distributed/blown lift
-%   - generator included for series-mode capability
-%
-% PURPOSE
-%   1) Convert the existing P/W - W/S sizing into dimensional P - S space.
-%   2) Make takeoff weight a function W0 = W0(S,P).
-%   3) Overlay the performance constraints and shade the feasible region.
-%   4) Overlay a simple life-cycle climate objective (manufacturing + operation).
-%   5) Show discrete existing-engine choices and select a point with margin.
-%
-% This script uses the uploaded Weight_Predict.m only to ANCHOR the current
-% baseline design. Weight_Predict_PS.m then performs the actual P-S weight
-% variation. Keep all three .m files in the same MATLAB folder.
-%
-% OUTPUTS
-%   AE481_PS_Environmental.pdf  (vector)
-%   AE481_PS_Environmental.png  (600 dpi)
-%   AE481_PS_Engine_Candidates.csv
-%   AE481_PS_Selected_Design.csv
-
-clear; clc; close all;
+% WORKSPACE & PIPELINE INTEGRATED VERSION
 
 %% ========================================================================
-% 1. CURRENT BASELINE FROM THE TEAM'S WEIGHT CODE
+% 1. LOAD WORKSPACE INPUTS & BASELINE FROM PIPELINE
 % ========================================================================
 
 if exist('Weight_Predict.m','file') ~= 2
@@ -39,210 +15,69 @@ if exist('Weight_Predict_PS.m','file') ~= 2
     error('Weight_Predict_PS.m must be in the same MATLAB folder.');
 end
 
-baseline = Weight_Predict(400,225,12300,16.5,8,"electric",210);
+% If run independently without the master runner, populate 'in' and baseline
+if ~exist('in', 'var')
+    fprintf('Running aircraft_inputs to populate design parameters...\n');
+    aircraft_inputs;
+end
 
-mTO_baseline_kg       = baseline{'kg','GrossTakeoff'};
-mEmpty_baseline_kg    = baseline{'kg','Empty'};
-mElectric_baseline_kg = baseline{'kg','ElectricHardware'};
+if ~exist('values_kg', 'var')
+    fprintf('Running Weight_Predict to generate weight vector...\n');
+    values_kg = Weight_Predict(in);
+end
+
+% Inherit all parametric inputs directly from the centralized 'in' structure
+p = in;
+
+% Map baseline weights and reference design variables from the active workflow
+p.mTO_baseline_kg      = values_kg(1);
+p.mEmpty_baseline_kg   = values_kg(2);
+p.mElectric_baseline_kg= values_kg(6);
+p.mBattery_baseline_kg = values_kg(7);
+
+if exist('S_design_m2', 'var') && exist('P_installed_kW', 'var') && exist('Swet_m2', 'var')
+    p.S_ref_m2     = S_design_m2;
+    p.P_ref_kW     = P_installed_kW;
+    p.Swet_rest_m2 = (p.CD0_ref / p.Cf_equiv) * p.S_ref_m2 - 2 * p.S_ref_m2;
+else
+    % Fallback anchor if run standalone
+    Wbase_N = p.mTO_baseline_kg * p.g0;
+    WS_ref = 690.0;
+    p.S_ref_m2 = Wbase_N / WS_ref;
+    p.Swet_rest_m2 = (p.CD0_ref / p.Cf_equiv) * p.S_ref_m2 - 2 * p.S_ref_m2;
+    p.P_ref_kW = 1812.2; % Default baseline power estimate
+end
+
+mTO_baseline_kg       = p.mTO_baseline_kg;
+mEmpty_baseline_kg    = p.mEmpty_baseline_kg;
+mElectric_baseline_kg = p.mElectric_baseline_kg;
+
+% Populate derived operational velocities and densities
+p.Vcruise225_ms = p.cruise_kt * 0.514444;
+p.Vcruise250_ms = 250 * 0.514444; 
+p.sTOreq_m      = p.s_TO_req_m;
+p.sLreq_m       = p.s_L_req_m;
+p.hObstacle_m   = p.h_obstacle_m;
+p.ROC_RFP_ms    = p.ROC_RFP_ms;
+
+p.rho_field   = atmDensityPS(p.h_field_m, p.dT_field_C);
+p.rho_cruise  = atmDensityPS(p.h_cruise_m, p.dT_cruise_C);
+p.rho_ceiling = atmDensityPS(p.h_ceiling_m, p.dT_ceiling_C);
 
 %% ========================================================================
-% 2. ALL PARAMETRIC INPUTS / TEAM ASSUMPTIONS
+% 2. ENVIRONMENTAL OBJECTIVE - SIMPLE CLIMATE PROXY
 % ========================================================================
-
-p.g0 = 9.80665;
-
-% Mission
-p.range_nmi         = 400;
-p.electricRange_nmi = 210;
-p.cruise_kt         = 225;
-p.altitude_ft       = 12300;
-p.alternate_nmi     = 50;
-p.reserve_min       = 30;
-p.reserve_kt        = 0.80*p.cruise_kt;
-p.engineOut_nmi     = 20;
-p.engineOut_kt      = 120;
-
-p.climb_kt      = 120;
-p.climb_ftmin   = 1500;
-p.descent_kt    = 150;
-p.descent_ftmin = 1000;
-p.climbDistance_nmi = p.climb_kt*(p.altitude_ft/p.climb_ftmin)/60;
-p.descentDistance_nmi = p.descent_kt*(p.altitude_ft/p.descent_ftmin)/60;
-
-% Payload: retained from uploaded Weight_Predict.m
-num_people = 8;
-p.mPeople_kg  = 86.1825*num_people;
-p.mBaggage_kg = 13.6075*num_people;
-
-% Aerodynamics / configuration
-p.AR       = 6.0;
-p.e_clean  = 0.825;
-p.e_TO     = 0.775;
-p.e_L      = 0.725;
-p.e_CLoT   = 0.75;
-p.CD0_ref  = 0.018;        % current team's reference clean CD0
-p.Cf_equiv = 0.0030;
-p.LD_ref   = 16.5;         % preserve current weight-code L/D at baseline S
-
-p.CLmax_clean = 1.10;
-p.CLmax_TO    = 7.5;       % Aligned with AE481_Constraint_Diagram_v9.m
-p.CLmax_L     = 7.5;       % Aligned with AE481_Constraint_Diagram_v9.m
-p.dCD0_TO_flaps = 0.015;
-p.dCD0_L_flaps  = 0.065;
-p.dCD0_gear     = 0.020;
-p.dCD0_CLoT     = 0.010;
-
-% Weight fractions
-p.beta_cruise  = 0.97;
-p.beta_landing = 0.97;
-p.beta_climb   = 1.00;
-p.beta_maneuver = 0.97;
-p.beta_ceiling  = 0.97;
-
-% Propeller efficiencies and available-rated-power fractions
-p.eta_TO       = 0.75;
-p.eta_climb    = 0.80;
-p.eta_cruise   = 0.85;
-p.eta_balked   = 0.75;
-p.eta_maneuver = 0.85;
-p.eta_ceiling  = 0.85;
-
-p.powerFrac_TO       = 1.00;
-p.powerFrac_climb    = 1.00;
-p.powerFrac_cruise   = 0.94; %CHANGE
-p.powerFrac_balked   = 1.00;
-p.powerFrac_maneuver = 0.80;
-p.powerFrac_ceiling  = 0.70;
-
-% Hybrid architecture - PARAMETRIC TEAM ASSUMPTIONS
-p.thermalShare  = 0.50;   % engine propulsive share at full boost
-p.electricShare = 0.50;   % electric motor share at full boost
-
-p.engineOfftakeFraction = 0.05;
-
-p.hubMotorFractionOfElectric = 0.20;  
-p.distributedFractionOfElectric = 0.80; 
-p.numDistributedMotors = 8;
-
-p.generatorFractionOfElectric = 0.30;
-p.generator_kWkg = 8.0;
-p.generatorInstallationFraction = 0.15;
-
-p.etaMotor    = 0.96;
-p.etaInverter = 0.98;
-p.etaCable    = 0.996;
-p.etaBattery  = 0.96;
-p.motor_kWkg    = 10;
-p.inverter_kWkg = 16;
-p.electricInstallationFraction = 0.30;
-p.extraElectricHardware_kg = 5;
-
-p.pack_Whkg = 700;
-p.usableSOC = 0.80;
-p.pack_kWkg = 2.0;
-p.boost_min = 5;
-p.auxiliary_kW = 3;
-
-p.Cp_lb_hphr = 0.40;
-p.etaProp = 0.85;
-p.K_Breguet = 325.9;
-p.rWarmup  = 0.990;
-p.rTaxi    = 0.995;
-p.rTakeoff = 0.995;
-p.rClimb   = 0.985;
-p.rDescent = 0.985;
-p.rLanding = 0.995;
-
-p.Nz_ultimate = 5.7;
-p.tc_root = 0.16;
-p.taperRatio = 0.50;
-p.sweep25_deg = 0;
-p.controlSurfaceFraction = 0.30;
-p.kPropulsionGroup = 1.16;
-
-p.weightTolerance = 1e-7;
-p.maxWeightIterations = 1000;
-p.massNumericalLimit_kg = 25000;
-p.mTO_baseline_kg = mTO_baseline_kg;
-p.mEmpty_baseline_kg = mEmpty_baseline_kg;
-p.mElectric_baseline_kg = mElectric_baseline_kg;
-
-p.Vcruise225_ms = 225*0.514444;
-p.Vcruise250_ms = 250*0.514444; 
-p.sTOreq_m = 300*0.3048;
-p.sLreq_m  = 300*0.3048;
-p.hObstacle_m = 50*0.3048;
-p.ROC_RFP_ms = 1500*0.00508;
-
-p.h_field_m = 0;
-p.dT_field_C = 10;
-p.h_cruise_m = 10000*0.3048;
-p.dT_cruise_C = 0;
-p.h_ceiling_m = 12500*0.3048;
-p.dT_ceiling_C = 0;
-p.ROC_ceiling_ms = 100*0.00508;
-
-p.G_initial = 0.04;
-p.G_CLoT    = 0.01;
-p.G_balked  = 0.03;
-p.CLoT_power_remaining = 0.50;
-
-p.ks_initial = 1.20;
-p.ks_CLoT    = 1.20;
-p.ks_balked  = 1.30;
-p.ks_ceiling = 1.10;
-
-p.mu_roll = 0.02;
-p.k_rotation = 1.10;
-p.k_transition = 1.15;
-p.n_transition = 1.50;
-p.gamma_takeoff_deg = 15;
-
-p.gamma_approach_deg = 15;
-p.k_touchdown = 1.15;
-p.stop_decel_g = 0.69;
-p.n_flare = 1.15;
-
-p.phi_maneuver_deg = 60;
-p.n_maneuver = 1/cosd(p.phi_maneuver_deg);
-p.V_maneuver_ms = p.Vcruise225_ms;
-
-p.MTOW_limit_kg = 19000*0.45359237;
-
-p.rho_field   = atmDensityPS(p.h_field_m,p.dT_field_C);
-p.rho_cruise  = atmDensityPS(p.h_cruise_m,p.dT_cruise_C);
-p.rho_ceiling = atmDensityPS(p.h_ceiling_m,p.dT_ceiling_C);
+% Inherited directly from centralized pipeline (in.* fields mapped to p.*)
 
 %% ========================================================================
-% 3. ENVIRONMENTAL OBJECTIVE - SIMPLE CLIMATE PROXY
-% ========================================================================
-
-p.fuelCO2_kg_per_kgFuel = 3.16;
-p.gridCO2_kg_per_kWh = 0.348018746;
-p.batteryManufacturing_kgCO2e_per_kWh = 64;
-p.airframeManufacturing_kgCO2e_per_kgEmpty = 1401164/42092;
-p.gridChargeEfficiency = 0.95;
-p.lifeMissions = 15000;
-
-%% ========================================================================
-% 4. BUILD A BASELINE (Sref, Pref) - ANCHORED TO CONSTRAINT DIAGRAM
+% 3. BUILD A BASELINE (Sref, Pref) - ANCHORED TO CONSTRAINT DIAGRAM
 % ========================================================================
 
 Wbase_N = mTO_baseline_kg * p.g0;
 
-% Explicitly anchor to your constraint diagram's selected design point
-WS_ref = 690.0;                 % [N/m^2] from your constraint diagram
-S_ref_m2 = Wbase_N / WS_ref;    % Yields ~80.84 m^2 for your 5686 kg mass
-
-p.S_ref_m2 = S_ref_m2;
-p.Swet_rest_m2 = (p.CD0_ref / p.Cf_equiv) * S_ref_m2 - 2 * S_ref_m2;
-
-% Preliminary required P/W at the anchored baseline point
-baseAero.CD0_clean = p.CD0_ref;
-basePerf = performanceConstraintsPS(WS_ref, baseAero.CD0_clean, p);
-PW_ref = 1.05 * basePerf.PW_threshold_WN;
-P_ref_kW = PW_ref * Wbase_N / 1000;
-p.P_ref_kW = P_ref_kW;
+WS_ref = Wbase_N / p.S_ref_m2;
+S_ref_m2 = p.S_ref_m2;
+P_ref_kW = p.P_ref_kW;
 
 fprintf('\n============================================================\n');
 fprintf('ANCHORED BASELINE FOR P-S SWEEP\n');
@@ -253,7 +88,7 @@ fprintf('Reference S          : %.2f m^2\n', S_ref_m2);
 fprintf('Reference P          : %.1f kW\n', P_ref_kW);
 
 %% ========================================================================
-% 5. P-S SWEEP
+% 4. P-S SWEEP
 % ========================================================================
 
 engineName = {'GE Catalyst (1300 shp)'; 'Honeywell TPE331-14GR'; ...
@@ -339,10 +174,10 @@ if ~any(Feasible(:))
 end
 
 %% ========================================================================
-% 6. EXISTING ENGINE LINES + WIGGLE ROOM
+% 5. EXISTING ENGINE LINES + WIGGLE ROOM
 % ========================================================================
 
-designPowerMargin = 0.07;
+designPowerMargin = 0.01;
 
 nEng = numel(engineSHP);
 enginePass = false(nEng,1);
@@ -428,7 +263,7 @@ EngineCandidates = table( ...
 writetable(EngineCandidates,'AE481_PS_Engine_Candidates.csv');
 
 %% ========================================================================
-% 7. PLOT: FEASIBLE REGION + CONSTRAINTS + ENVIRONMENTAL CONTOURS
+% 6. PLOT: FEASIBLE REGION + CONSTRAINTS + ENVIRONMENTAL CONTOURS
 % ========================================================================
 
 P_plot_grid = plotPowerScale*P_grid_kW;
@@ -465,13 +300,13 @@ end
 
 cc = lines(10);
 plotZeroContour(S_grid_m2,P_plot_grid,M_takeoff,'Takeoff <= 300 ft',1.6,cc(1,:));
-plotZeroContour(S_grid_m2,P_plot_grid,M_roc,'ROC >= 1500 ft/min',1.6,cc(2,:));
+plotZeroContour(S_grid_m2,P_plot_grid,M_roc, sprintf('ROC >= %d ft/min', in.climb_ftmin), 1.6,cc(2,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_initial,'Initial climb >= 4%',1.6,cc(3,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_clot,'CLoT climb >= 1%',1.6,cc(4,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_balked,'Balked landing >= 3%',1.6,cc(5,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_cruise,'Cruise >= 225 kt',2.0,cc(6,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_maneuver,'Sustained 60 deg bank',2.0,cc(7,:));
-plotZeroContour(S_grid_m2,P_plot_grid,M_ceiling,'Service ceiling 12,500 ft',1.6,cc(8,:));
+plotZeroContour(S_grid_m2, P_plot_grid, M_ceiling, sprintf('Service ceiling %d ft', in.serviceCeiling), 1.6, cc(8,:));
 plotZeroContour(S_grid_m2,P_plot_grid,M_landing,'Landing <= 300 ft',2.0,[1 0.5 0]);
 plotZeroContour(S_grid_m2,P_plot_grid,M_mtow,'Part 23 MTOW <= 19,000 lb',1.6,cc(10,:));
 
@@ -487,22 +322,28 @@ title({'M-BRAER Parametric P-S Constraint Diagram', ...
 xlim([min(S_vec_m2) max(S_vec_m2)]);
 ylim(plotPowerScale*[min(P_vec_kW) max(P_vec_kW)]);
 
-% Manual design point
-showManualDesignPoint = true;  
-manualWingArea_m2 = 80.84;
-manualTotalPower_kW = 1812.2;
-
-if showManualDesignPoint
-    plot(manualWingArea_m2, plotPowerScale * manualTotalPower_kW, 'kp', ...
-        'MarkerSize', 16, 'MarkerFaceColor', 'y', 'LineStyle', 'none', ...
-        'DisplayName', sprintf('Design point (%.2f m^2, %.1f kW)', manualWingArea_m2, manualTotalPower_kW));
+% Find the feasible point that minimizes CO2 emissions in the P-S sweep
+validFeas = Feasible & isfinite(J_kgCO2eMission);
+if any(validFeas(:))
+    [~, idxOpt] = min(J_kgCO2eMission(validFeas));
+    feasS = S_grid_m2(validFeas);
+    feasP = P_grid_kW(validFeas);
+    optS = feasS(idxOpt);
+    optP = feasP(idxOpt);
+else
+    optS = S_ref_m2;
+    optP = P_ref_kW;
 end
+
+plot(optS, plotPowerScale * optP, 'kp', ...
+    'MarkerSize', 16, 'MarkerFaceColor', 'y', 'LineStyle', 'none', ...
+    'DisplayName', sprintf('Optimal P-S Design (%.2f m^2, %.1f kW)', optS, optP));
 
 legend('Location','east');
 exportFigurePS('AE481_PS_Environmental');
 
 %% ========================================================================
-% 8. SELECTED DESIGN REPORT
+% 7. SELECTED DESIGN REPORT
 % ========================================================================
 
 fprintf('\n============================================================\n');
@@ -510,65 +351,47 @@ fprintf('DISCRETE ENGINE CANDIDATES\n');
 fprintf('============================================================\n');
 disp(EngineCandidates);
 
-if isempty(selectedDesign)
-    warning(['No existing-engine candidate satisfies the %.0f%% power margin ', ...
-             'inside the current sweep.'], 100*designPowerMargin);
-else
-    engName = engineName{selectedEngineIndex};
-    PengRated_kW = engineRated_kW(selectedEngineIndex);
-    PthermalProp_kW = p.thermalShare*selectedDesign.P_kW;
-    Pofftake_kW = p.engineOfftakeFraction*PengRated_kW;
-    Pelectric_kW = p.electricShare*selectedDesign.P_kW;
-    Phub_kW = p.hubMotorFractionOfElectric*Pelectric_kW;
-    PdistributedTotal_kW = p.distributedFractionOfElectric*Pelectric_kW;
-    PeachDistributed_kW = PdistributedTotal_kW/p.numDistributedMotors;
-    Pgenerator_kW = p.generatorFractionOfElectric*Pelectric_kW;
+% Evaluate the exact continuous grid-minimum point found for the plot star
+selectedDesign = evaluatePSPoint(optS, optP, p);
 
+if ~selectedDesign.valid
+    warning('The optimal P-S grid point could not be fully evaluated.');
+else
     fprintf('\n============================================================\n');
-    fprintf('SELECTED P-S DESIGN\n');
+    fprintf('SELECTED P-S DESIGN (GLOBAL OPTIMAL FROM PLOT)\n');
     fprintf('============================================================\n');
-    fprintf('P-S model engine choice  : %s\n',engName);
-    fprintf('Engine rated power      : %.1f kW (%.0f shp)\n', ...
-        PengRated_kW,engineSHP(selectedEngineIndex));
-    fprintf('Wing area S             : %.2f m^2\n',selectedDesign.S_m2);
+    fprintf('Wing area S             : %.2f m^2\n', selectedDesign.S_m2);
+    fprintf('Total Installed Power   : %.1f kW\n', selectedDesign.P_kW);
     fprintf('Converged MTOW          : %.1f kg (%.0f lb)\n', ...
-        selectedDesign.mass.mTO_kg,selectedDesign.mass.mTO_kg/0.45359237);
-    fprintf('W/S                     : %.1f N/m^2\n',selectedDesign.WS_Nm2);
+        selectedDesign.mass.mTO_kg, selectedDesign.mass.mTO_kg / 0.45359237);
+    fprintf('W/S                     : %.1f N/m^2\n', selectedDesign.WS_Nm2);
     fprintf('Required P/W            : %.2f W/N\n', ...
         selectedDesign.constraints.PW_threshold_WN);
-    fprintf('Available P/W           : %.2f W/N\n',selectedDesign.PW_actual_WN);
+    fprintf('Available P/W           : %.2f W/N\n', selectedDesign.PW_actual_WN);
     fprintf('Installed-power margin  : %.1f%%\n', ...
-        100*selectedDesign.powerMarginFraction);
-    fprintf('Landing distance        : %.2f m\n',selectedDesign.constraints.sLanding_m);
+        100 * selectedDesign.powerMarginFraction);
+    fprintf('Landing distance        : %.2f m\n', selectedDesign.constraints.sLanding_m);
+    fprintf('Mission CO2e Objective  : %.2f kg CO2e\n', selectedDesign.objective_kgCO2e_perMission);
 
     SelectedDesign = table( ...
-        string(engName),selectedDesign.S_m2,selectedDesign.P_kW, ...
-        selectedDesign.mass.mTO_kg,selectedDesign.WS_Nm2, ...
-        selectedDesign.PW_actual_WN,selectedDesign.constraints.PW_threshold_WN, ...
-        100*selectedDesign.powerMarginFraction, ...
+        selectedDesign.S_m2, selectedDesign.P_kW, ...
+        selectedDesign.mass.mTO_kg, selectedDesign.WS_Nm2, ...
+        selectedDesign.PW_actual_WN, selectedDesign.constraints.PW_threshold_WN, ...
+        100 * selectedDesign.powerMarginFraction, ...
         selectedDesign.constraints.sLanding_m, ...
-        selectedDesign.mass.mFuel_kg,selectedDesign.mass.mBattery_kg, ...
-        selectedDesign.mass.EpackNominal_kWh,selectedDesign.mass.LD_cruise, ...
-        Phub_kW,PeachDistributed_kW,Pgenerator_kW, ...
+        selectedDesign.mass.mFuel_kg, selectedDesign.mass.mBattery_kg, ...
+        selectedDesign.mass.EpackNominal_kWh, selectedDesign.mass.LD_cruise, ...
         selectedDesign.operation_kgCO2_perMission, ...
         selectedDesign.manufacturing_kgCO2e, ...
         selectedDesign.objective_kgCO2e_perMission, ...
-        PengRated_kW,PthermalProp_kW,Pelectric_kW, ...
-        100*selectedDesign.electricCruisePowerMargin, ...
-        100*selectedDesign.thermalCruisePowerMargin, ...
-        (selectedDesign.electricCruisePowerMargin >= 0 && ...
-         selectedDesign.thermalCruisePowerMargin >= 0), ...
-        'VariableNames' ,{ ...
-        'Engine','WingArea_m2','InstalledPower_kW','MTOW_kg','WS_Nm2', ...
-        'PWavailable_WN','PWrequired_WN','PowerMargin_pct','LandingDistance_m', ...
-        'Fuel_kg','Battery_kg','BatteryNominal_kWh','Cruise_LD', ...
-        'HubMotor_kW','EachBlownLiftMotor_kW','Generator_kW', ...
-        'OperatingCO2_kgMission','ManufacturingCO2e_kg', ...
-        'ObjectiveCO2e_kgMission','EngineRated_kW','NetThermal_kW', ...
-        'ElectricMotors_kW','ElectricCruisePowerMargin_pct', ...
-        'ThermalCruisePowerMargin_pct','PassesSeparateCruisePowerChecks'});
+        'VariableNames', { ...
+        'WingArea_m2', 'InstalledPower_kW', 'MTOW_kg', 'WS_Nm2', ...
+        'PWavailable_WN', 'PWrequired_WN', 'PowerMargin_pct', 'LandingDistance_m', ...
+        'Fuel_kg', 'Battery_kg', 'BatteryNominal_kWh', 'Cruise_LD', ...
+        'OperatingCO2_kgMission', 'ManufacturingCO2e_kg', ...
+        'ObjectiveCO2e_kgMission'});
 
-    writetable(SelectedDesign,'AE481_PS_Selected_Design.csv');
+    writetable(SelectedDesign, 'AE481_PS_Selected_Design.csv');
     disp(SelectedDesign);
 end
 
