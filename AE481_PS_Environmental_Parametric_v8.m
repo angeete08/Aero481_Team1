@@ -384,6 +384,20 @@ else
     fprintf('Landing distance        : %.2f m\n', selectedDesign.constraints.sLanding_m);
     fprintf('Mission CO2e Objective  : %.2f kg CO2e\n', selectedDesign.objective_kgCO2e_perMission);
 
+    fprintf('\n============================================================\n');
+    fprintf('SELECTED P-S DESIGN: FINAL WEIGHT BREAKDOWN\n');
+    fprintf('============================================================\n');
+    fprintf('Takeoff Mass (MTOW)      : %.2f kg (%.0f lb)\n', selectedDesign.mass.mTO_kg, selectedDesign.mass.mTO_kg / 0.45359237);
+    fprintf('  |- Empty Mass          : %.2f kg\n', selectedDesign.mass.mEmpty_kg);
+    fprintf('  |- Wing Model Weight   : %.2f kg\n', selectedDesign.mass.mWingModel_kg);
+    fprintf('  |- Thermal Group Mass  : %.2f kg\n', selectedDesign.mass.mThermalGroupModel_kg);
+    fprintf('  |- Electric Hardware   : %.2f kg\n', selectedDesign.mass.mElectricHardware_kg);
+    fprintf('  |- Generator Mass      : %.2f kg\n', selectedDesign.mass.mGenerator_kg);
+    fprintf('  |- Battery Mass        : %.2f kg (Nominal: %.2f kWh)\n', selectedDesign.mass.mBattery_kg, selectedDesign.mass.EpackNominal_kWh);
+    fprintf('  |- Mission Fuel Mass   : %.2f kg\n', selectedDesign.mass.mFuel_kg);
+    fprintf('  |- Payload (People+Bag): %.2f kg\n', p.mPeople_kg + p.mBaggage_kg);
+    fprintf('============================================================\n');
+
     SelectedDesign = table( ...
         selectedDesign.S_m2, selectedDesign.P_kW, ...
         selectedDesign.mass.mTO_kg, selectedDesign.WS_Nm2, ...
