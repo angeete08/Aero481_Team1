@@ -26,9 +26,9 @@ in.climb_ftmin       = 1500;    % ft/min
 in.descent_kt        = 150;     % kts
 in.descent_ftmin     = 1300;    % ft/min
 
-in.alternate_nmi     = 50;      % Alternate distance [nmi]
-in.reserve_min       = 30;      % Reserve duration [min]
-in.reserve_kt        = 0.80 * in.cruise_kt;
+in.reserve_min       = 45;      % Reserve duration [min]
+in.reserve_kt        = in.cruise_kt;
+in.alternate_nmi     = in.reserve_kt * (in.reserve_min/60);      % Alternate distance [nmi] calculated
 
 in.engineOut_nmi     = 20;      % Additional battery-only range [nmi]
 in.engineOut_kt      = 120;     % Contingency speed [kt]
@@ -111,7 +111,7 @@ in.e_L                  = 0.725;
 in.e_CLoT               = 0.75;
 
 % Propeller efficiencies / available power
-in.eta_TO               = 0.75;
+in.eta_TO               = 0.80;
 in.eta_climb            = 0.80;
 in.eta_cruise           = 0.85;
 in.eta_balked           = 0.75;
@@ -160,12 +160,12 @@ in.controlSurfaceFraction = 0.30;
 in.kPropulsionGroup     = 1.16;
 
 % Component efficiencies & hardware architecture
-in.etaMotor             = 0.96;
-in.etaWiring            = 0.98;
-in.etaInverter          = 0.98;
+in.etaMotor             = 0.97;
+in.etaWiring            = 0.99;
+in.etaInverter          = 0.99;
 in.etaCable             = 0.996;
-in.etaBattery           = 0.96;
-in.etaPropElec          = 0.85;
+in.etaBattery           = 0.97;
+in.etaPropElec          = 0.872;
 in.etaController        = 0.98;
 
 in.thermalShare         = 0.50;   

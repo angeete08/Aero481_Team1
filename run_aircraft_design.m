@@ -77,6 +77,35 @@ TailData = TailSizing(in, finalWingArea_m2);
 
 fprintf('\n7. Running Refined Raymer Weight Prediction (Hybrid_Aircraft_Refined_Weight)...\n');
 refined_values_kg = Hybrid_Aircraft_Refined_Weight(in, TailData, finalWingArea_m2, finalPower_kW);
+
+%refined_values_lb = refined_values_kg * kgToLb;
+
+% --- Run propulsion weight code ---
+prop_results = AE481_Propulsion_Weights( ...
+    'm_TO',        refined_values_kg(1), ...     % Updated gross takeoff mass [kg][cite: 7]
+    'S',           finalWingArea_m2, ...         % Updated wing area [m^2][cite: 7]
+    'P_TO',        finalPower_kW, ...            % Updated take-off power [kW][cite: 7]
+    'mB',          refined_values_kg(7), ...     % Updated battery mass [kg][cite: 7]
+    'm_fuel_tank', refined_values_kg(3), ...     % Updated fuel mass [kg][cite: 7]
+    'print',       false);    % Suppress automatic printout
+
+
+% Update input structure fields for downstream workflows
+in.turbineMassEach_kg   = prop_results.inputs.m_eng;
+in.generatorMassEach_kg = prop_results.m_MG;
+
+% --- Propagate Electric Hardware & MTOW Changes ---
+old_electric_kg = refined_values_kg(6);
+new_electric_kg = prop_results.m_el_x;  % Electric system mass excluding battery[cite: 7]
+delta_electric  = new_electric_kg - old_electric_kg;
+
+% Update Electric Hardware component (index 6)
+refined_values_kg(6) = new_electric_kg;
+
+% Since the hardware got heavier, Empty weight (index 2) and MTOW (index 1) must increase by delta_electric
+refined_values_kg(2) = refined_values_kg(2) + delta_electric;  % Empty weight increases
+refined_values_kg(1) = refined_values_kg(1) + delta_electric;  % Gross Takeoff Weight increases
+% ------------------------------------------------
 refined_values_lb = refined_values_kg * kgToLb;
 
 RefinedResultsTable = table( ...
