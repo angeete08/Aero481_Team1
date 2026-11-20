@@ -177,6 +177,14 @@ end
 % Re-evaluate tail sizing and geometry dimensions using the final optimized S
 TailData = TailSizing(in, finalWingArea_m2);
 
+fprintf('\n12. Generating V-n Diagram using final converged design and inputs...\n');
+AE481_Vn_Diagram;
+
+fprintf('\n13. Generating Payload Range Diagram using final converged design and inputs...\n');
+AE481_Payload_Range_Diagram;
+
+fprintf('\nWorkflow complete! All plots, reports, and V-n diagrams generated successfully.\n');
+
 fprintf('\nFull refined workflow complete! All updated P-S sweeps, tail sizing dimensions, and figures generated successfully.\n');
 
 fprintf('\nWorkflow complete! All plots and reports generated successfully.\n');
