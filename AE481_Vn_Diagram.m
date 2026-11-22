@@ -50,7 +50,8 @@ eas_to_tas = @(V_eas) V_eas ./ sqrt(sigma); % Eq. (11.1): V_TAS = V_EAS / sqrt(s
 tas_to_eas = @(V_tas) V_tas .* sqrt(sigma); % Eq. (11.1): V_EAS = V_TAS * sqrt(sigma)
 
 % Design Airspeeds in EAS [knots]
-VC_eas_kts = in.cruise_kt;       % Design cruise speed V_C [knots EAS] from 'in'
+VC_tas_kts = in.cruise_kt;                % Design cruise speed V_C [knots TAS] from 'in'
+VC_eas_kts = tas_to_eas(VC_tas_kts);      % Design cruise speed V_C [knots EAS] from 'in'
 VD_eas_kts = 1.25 * VC_eas_kts;  % Design dive speed V_D [knots EAS]
 
 % Aircraft under 50,000 lbs 
@@ -158,6 +159,6 @@ title('V-n Diagram (Maneuver and Gust Envelopes)');
 xlabel('Equivalent Airspeed, V_{EAS} (knots)');
 ylabel('Load Factor, n');
 xlim([0, VD_eas_kts * 1.15]);
-ylim([-2.0, max(n_limit_pos, n_gust_C_pos) + 0.8]);
-legend([p1, p2], {'Maneuver Envelope', 'Gust Envelope (FAR 25)'}, 'Location', 'northwest');
+ylim([-4.0, max(n_limit_pos, n_gust_C_pos) + 0.8]);
+legend([p1, p2], {'Maneuver Envelope', 'Gust Envelope'}, 'Location', 'northwest');
 hold off;
