@@ -183,6 +183,10 @@ AE481_Vn_Diagram;
 fprintf('\n13. Generating Payload Range Diagram using final converged design and inputs...\n');
 AE481_Payload_Range_Diagram;
 
+fprintf('\n14. Running CT7 propulsion analysis at the final P-S design point...\n');
+% Analysis only: uses in + selectedDesign, writes nothing back (see AE481_Propulsion_CT7_Pipeline.m)
+propCT7 = AE481_Propulsion_CT7_Pipeline(in, selectedDesign);
+
 fprintf('\nWorkflow complete! All plots, reports, and V-n diagrams generated successfully.\n');
 
 fprintf('\nFull refined workflow complete! All updated P-S sweeps, tail sizing dimensions, and figures generated successfully.\n');
