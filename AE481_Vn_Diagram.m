@@ -4,11 +4,11 @@ if ~exist('selectedDesign', 'var') || ~selectedDesign.valid
     if ~exist('in', 'var'), aircraft_inputs; end
     if ~exist('values_kg', 'var'), values_kg = Weight_Predict(in); end
     m_kg = values_kg(1);
-    %m_kg = 6854.76;
+    %m_kg = 5789.66;
     S = 88.64; % Default fallback area
 else
     m_kg = selectedDesign.mass.mTO_kg;
-    %m_kg = 6854.76;
+    %m_kg = 5789.66;
     S = selectedDesign.S_m2;
 end
 
