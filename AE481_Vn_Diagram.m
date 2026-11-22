@@ -4,11 +4,15 @@ if ~exist('selectedDesign', 'var') || ~selectedDesign.valid
     if ~exist('in', 'var'), aircraft_inputs; end
     if ~exist('values_kg', 'var'), values_kg = Weight_Predict(in); end
     m_kg = values_kg(1);
+    %m_kg = 6854.76;
     S = 88.64; % Default fallback area
 else
     m_kg = selectedDesign.mass.mTO_kg;
+    %m_kg = 6854.76;
     S = selectedDesign.S_m2;
 end
+
+fprintf('mass kg: %.2f\n', m_kg);
 
 % --- 1. Aircraft & Atmospheric Parameters ---
 W_lbs  = m_kg * in.kgToLb;          % Aircraft weight [lbs]
@@ -51,7 +55,7 @@ VD_eas_kts = 1.25 * VC_eas_kts;  % Design dive speed V_D [knots EAS]
 
 % Aircraft under 50,000 lbs 
 n_limit_pos = min(3.8, max(2.5, 2.1 + 24000 / (W_lbs + 10000)));
-n_limit_neg = -1.0;      % FAR Part 25 negative limit load factor
+n_limit_neg = -n_limit_pos*0.4;      % FAR Part 25 negative limit load factor
 
 fprintf('\n--- V-n DIAGRAM ANALYSIS (PIPELINE INTEGRATED) ---\n');
 fprintf('Aspect Ratio (AR): %.2f\n', AR);
