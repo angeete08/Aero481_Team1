@@ -87,7 +87,7 @@ in.Cp_lb_hphr           = 0.40;
 in.electricInstallationFraction = 0.30;
 
 % High-lift selections
-in.CLmax_clean          = 1.10;
+in.CLmax_clean          = 1.7;
 in.CLmax_TO             = 7.5;
 in.CLmax_L              = 7.5;
 
